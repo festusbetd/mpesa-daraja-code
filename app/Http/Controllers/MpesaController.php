@@ -54,8 +54,7 @@ class MpesaController extends Controller
         $phone = config('app.phone'); //0722.... Nb: temporarily set in the .env file
         $formatedPhone = substr($phone, 1); //722....
         $code = "254";
-       // $phoneNumber = $code . $formatedPhone; //254722....
-        $phoneNumber ='254722229862';
+        $phoneNumber ='254720651492';
 
         $url = config('app.stk_url');
         $callback_url = config('app.callback_url');
@@ -66,7 +65,7 @@ class MpesaController extends Controller
             'Password' => $this->lipaNaMpesaPassword(),
             'Timestamp' => Carbon::rawParse('now')->format('YmdHms'),
             'TransactionType' => 'CustomerPayBillOnline',
-            'Amount' => '1',
+            'Amount' => '6',
             'PartyA' => $phoneNumber,
             'PartyB' => $shortCode,
             'PhoneNumber' => $phoneNumber,
@@ -76,16 +75,7 @@ class MpesaController extends Controller
         ];
 
         $data_string = json_encode($curl_post_data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-
-       // return $data_string;
-
         $ch = curl_init();
-
-        // curl_setopt($curl, CURLOPT_URL, $url);
-        // curl_setopt($curl, CURLOPT_HTTPHEADER, array('Content-Type:application/json', 'Authorization:Bearer ' . $this->generateAccessToken()));
-        // curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        // curl_setopt($curl, CURLOPT_POST, true);
-        // curl_setopt($curl, CURLOPT_POSTFIELDS, $data_string);
         $auth_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
 
         curl_setopt($ch, CURLOPT_URL, $auth_url);
@@ -124,130 +114,131 @@ class MpesaController extends Controller
 
     public function MpesaApiResponse(Request $request)
     {
-    //    $response = json_decode($request->getContent());
-    $callbackData='{
-        "Body": 
-        {
-            "stkCallback": 
-            {
-                "MerchantRequestID": "21605-295434-4",
-                "CheckoutRequestID": "ws_CO_04112017184930742",
-                "ResultCode": 0,
-                "ResultDesc": "The service request is processed successfully.",
-                "CallbackMetadata": 
-                {
-                    "Item": 
-                    [
-                        {
-                            "Name": "Amount",
-                            "Value": 1
-                        },
-                        {
-                            "Name": "MpesaReceiptNumber",
-                            "Value": "LK451H35OP"
-                        },
-                        {
-                            "Name": "Balance"
-                        },
-                        {
-                            "Name": "TransactionDate",
-                            "Value": 20171104184944
-                        },
-                        {
-                            "Name": "PhoneNumber",
-                            "Value": 254727894083
-                        }
-                    ]
-                }
-            }
-        }
-    }';
+        $response =file_get_contents("php://input");
+       // $response = $request->getContent();
+       // $response = $request->all();
+    // $response ='{
+    //     "Body": 
+    //     {
+    //         "stkCallback": 
+    //         {
+    //             "MerchantRequestID": "21605-295434-4",
+    //             "CheckoutRequestID": "ws_CO_04112017184930742",
+    //             "ResultCode": 0,
+    //             "ResultDesc": "The service request is processed successfully.",
+    //             "CallbackMetadata": 
+    //             {
+    //                 "Item": 
+    //                 [
+    //                     {
+    //                         "Name": "Amount",
+    //                         "Value": 1
+    //                     },
+    //                     {
+    //                         "Name": "MpesaReceiptNumber",
+    //                         "Value": "LK451H35OP"
+    //                     },
+    //                     {
+    //                         "Name": "Balance"
+    //                     },
+    //                     {
+    //                         "Name": "TransactionDate",
+    //                         "Value": 20171104184944
+    //                     },
+    //                     {
+    //                         "Name": "PhoneNumber",
+    //                         "Value": 254727894083
+    //                     }
+    //                 ]
+    //             }
+    //         }
+    //     }
+    // }';
+
+ // A cancelled request
+//  $response='{
+
+//     "Body":{
+//       "stkCallback":{
+//         "MerchantRequestID":"8555-67195-1",
+//         "CheckoutRequestID":"ws_CO_27072017151044001",
+//         "ResultCode":1032,
+//         "ResultDesc":"[STK_CB - ]Request cancelled by user"
+//       }
+//     }
+//   }';
+
+   $object = json_decode($response, true);
+  // $object = $response;
+   $stkCallback= $object['Body']['stkCallback'];
+  
+    $resultCode =$stkCallback['ResultCode'];   
+    $resultDesc = $stkCallback['ResultDesc'];
+    $merchantRequestID = $stkCallback['MerchantRequestID'];
+    $checkoutRequestID = $stkCallback['CheckoutRequestID'];
+
+    //return $resultCode;
+
+   if($resultCode==0){
     
-   // $callbackData = json_decode($request->getContent());
-  // $callbackData = json_decode($callback);
-   return $callbackData->body;
-    //$callbackData = $request->all();
-    //$callbackData = json_encode($callbackData);
-   // $callbackData = json_decode($callbackData);
+    $CallbackMetadata=$stkCallback['CallbackMetadata']['Item'];
+    $amount = $CallbackMetadata[0]['Value'];
+    $mpesaReceiptNumber = $CallbackMetadata[1]['Value'];
+    $transactionDate =$CallbackMetadata[3]['Value'];
+    $phoneNumber = $CallbackMetadata[4]['Value'];
 
-   
-   $resultCode = 
-    $resultCode = $callbackData
-        ->Body
-        ->stkCallback->ResultCode;
-        
-    $resultDesc = $callbackData
-        ->Body
-        ->stkCallback->ResultDesc;
-    $merchantRequestID = $callbackData
-        ->Body
-        ->stkCallback->MerchantRequestID;
-    $checkoutRequestID = $callbackData
-        ->Body
-        ->stkCallback->CheckoutRequestID;
-
-    $amount = $callbackData
-        ->Body
-        ->stkCallback
-        ->CallbackMetadata
-        ->Item[0]->Value;
-    $mpesaReceiptNumber = $callbackData
-        ->Body
-        ->stkCallback
-        ->CallbackMetadata
-        ->Item[1]->Value;
-    $transactionDate = $callbackData
-        ->Body
-        ->stkCallback
-        ->CallbackMetadata
-        ->Item[3]->Value;
-    $phoneNumber = $callbackData
-        ->Body
-        ->stkCallback
-        ->CallbackMetadata
-        ->Item[4]->Value;
-
-        // $trn = new MpesaTransaction([
+        $trn = new MpesaTransaction([
           
-        //     'TransactionType' => $response->TransactionType,
-        //     'TransID' => $response->TransID,
-        //     'TransTime' => $response->TransTime,
-        //     'TransAmount' => $response->TransAmount,
-        //     'BusinessShortCode' => $response->BusinessShortCode,
-        //     'BillRefNumber' => $response->BillRefNumber,
-        //     'InvoiceNumber' => $response->InvoiceNumber,
-        //     'OrgAccountBalance' => $response->OrgAccountBalance,
-        //     'ThirdPartyTransID' => $response->ThirdPartyTransID,
-        //     'MSISDN' => $response->MSISDN,
-        //     'FirstName' => $response->FirstName,
-        //     'MiddleName' => $response->MiddleName,
-        //     'LastName' => $response->LastName,
-        // ]);
+            'TransactionType' => '',
+            'TransID' =>  $checkoutRequestID,
+            'TransTime' => $transactionDate ,
+            'TransAmount' =>$amount,
+            'BusinessShortCode' =>config('app.short_Code') ,
+            'BillRefNumber' => $mpesaReceiptNumber,
+            'InvoiceNumber' =>'' ,
+            'resultCode' =>$resultCode ,
+            'resultDesc' =>$resultDesc ,
+            'OrgAccountBalance' =>'' ,
+            'ThirdPartyTransID' => $merchantRequestID,
+            'MSISDN' => $phoneNumber,
+            'FirstName' => '',
+            'MiddleName' =>'',
+            'LastName' => '',
+        ]);
 
-        DB::table('mpesa_transactions')->insert(
-            ['TransactionType' => '$response->TransactionType',
-             'TransID' => '$response->TransID', 
-            'TransTime' =>  '$response->TransTime',
-             'TransAmount' => '$response->TransAmount', 
-             'BusinessShortCode' => '$response->BusinessShortCode', 
-             'BillRefNumber' => '$response->BillRefNumber', 
-             'InvoiceNumber' => '$response->InvoiceNumber', 
-             'OrgAccountBalance	' =>  '$response->OrgAccountBalance',
-             'ThirdPartyTransID' => '$response->ThirdPartyTransID',
-             'MSISDN' => '$response->MSISDN',
-             'FirstName' =>  '$response->FirstName',
-             'MiddleName' =>' $response->MiddleName',
-             'LastName' =>  '$response->MiddleName',
-             'response' => '$response->LastName',
-            
-            ]);
+        $trn->save();
 
+        return response()->json([
+            "Success" => "Mpesa transaction has been added",
+        ], 201);
+   }
+   else{
+    $trn = new MpesaTransaction([
+        'TransactionType' => '',
+        'TransID' =>  $checkoutRequestID,
+        'TransTime' => '' ,
+        'TransAmount' =>'',
+        'BusinessShortCode' =>config('app.short_Code') ,
+        'BillRefNumber' => '',
+        'InvoiceNumber' =>'' ,
+        'resultCode' =>$resultCode ,
+        'resultDesc' =>$resultDesc ,
+        'OrgAccountBalance' =>'' ,
+        'ThirdPartyTransID' => $merchantRequestID,
+        'MSISDN' =>'',
+        'FirstName' => '',
+        'MiddleName' =>'',
+        'LastName' => '',
+    ]);
 
-        // $trn->save();
+    $trn->save();
 
-        // return response()->json([
-        //     "Success" => "Mpesa transaction has been added",
-        // ], 201);
+    return response()->json([
+        "Success" => "Mpesa transaction has been added",
+    ], 201);
+   }
+   
+  
     }
 
     public function confirmation(Request $request)

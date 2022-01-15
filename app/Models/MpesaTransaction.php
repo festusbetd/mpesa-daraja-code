@@ -17,6 +17,8 @@ class MpesaTransaction extends Model
         'BusinessShortCode',
         'BillRefNumber',
         'InvoiceNumber',
+        'resultCode',
+        'resultDesc',
         'OrgAccountBalance',
         'ThirdPartyTransID',
         'MSISDN',
